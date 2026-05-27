@@ -1,17 +1,23 @@
 ---
-name: My Fedora # Whatever I want it to be
-description: Personal Image Test # Lil description
+# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
+# image will be published to ghcr.io/<user>/<name>
+name: template
+# description will be included in the image's metadata
+description: This is my personal OS image.
 
-base-image: quay.io/fedora-ostree-desktops/silverblue # Base to start on
-image-version: latest # Version of Base
+# the base image to build on top of (FROM) and the version tag to use
+base-image: ghcr.io/ublue-os/silverblue-main
+image-version: 42 # latest is also supported if you want new updates ASAP
 
-modules: # Where to? in files
+# module configuration, executed in order
+# you can include multiple instances of the same module
+modules:
   - type: files
     files:
       - source: system
-        destination: /
+        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
 
-  - type: dnf # Mutable installs/uninstalls
+  - type: dnf
     repos:
       copr:
         - atim/starship
@@ -21,18 +27,19 @@ modules: # Where to? in files
         - starship
     remove:
       packages:
+        # example: removing firefox (in favor of the flatpak)
+        # "firefox" is the main package, "firefox-langpacks" is a dependency
         - firefox
-        - firefox-langpacks
+        - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
 
-  - type: default-flatpaks # Flatpak installs/uninstalls
+  - type: default-flatpaks
     configurations:
       - notify: true # Send notification after install/uninstall is finished (true/false)
         scope: system
-        repo:
-          name: flathub
-          url: https://flathub.org/repo/flathub.flatpakrepo
-          install:
-            - net.mullvad.MullvadBrowser
-            - net.lutris.Lutris
-            - com.ranfdev.DistroShelf
+        # If no repo information is specified, Flathub will be used by default
+        install: # system flatpaks we want all users to have and not remove
+          - org.mozilla.firefox
+          - org.gnome.Loupe
       - scope: user # Also add Flathub user repo, but no user packages
+
+  - type: signing # this sets up the proper policy & signing files for signed images to work fully
